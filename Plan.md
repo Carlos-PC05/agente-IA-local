@@ -54,10 +54,10 @@ local-agent/
 
 ### Fase 1 — MVP: bucle + una tool
 
-- [ ] Implementar el bucle básico (plan → act → observe → refine) en `loop.py`
-- [ ] Implementar una única tool: listar/leer archivos de una carpeta
-- [ ] Probar el flujo de extremo a extremo: petición del usuario → el modelo decide usar la tool → se ejecuta → el resultado vuelve al modelo → respuesta final
-- [ ] Medir latencia real en tu hardware (CPU) para calibrar expectativas
+- [x] Implementar el bucle básico (plan → act → observe → refine) en `loop.py`
+- [x] Implementar una única tool: listar/leer archivos de una carpeta
+- [ ] Probar el flujo de extremo a extremo: petición del usuario → el modelo decide usar la tool → se ejecuta → el resultado vuelve al modelo → respuesta final (pendiente: requiere Ollama corriendo con el modelo cargado)
+- [ ] Medir latencia real en tu hardware (CPU) para calibrar expectativas (pendiente: requiere Ollama corriendo)
 
 ### Fase 2 — Seguridad de herramientas
 
