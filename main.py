@@ -1,3 +1,4 @@
+"""REPL de linea de comandos para probar el agente de extremo a extremo contra Ollama."""
 import openai
 
 from agent.config import OLLAMA_BASE_URL
@@ -12,6 +13,13 @@ SYSTEM_PROMPT = (
 
 
 def main():
+    """Arranca el REPL: mantiene el historial de conversacion entre turnos.
+
+    Crea el cliente OpenAI apuntando a Ollama y una Memory con el prompt de
+    sistema, y por cada linea de entrada del usuario llama a run_turn() para
+    ejecutar el ciclo completo del agente e imprime la respuesta final.
+    Termina con "salir", "exit" o "quit".
+    """
     client = openai.OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama")
     memory = Memory(system_prompt=SYSTEM_PROMPT)
 

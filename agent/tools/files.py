@@ -5,6 +5,17 @@ from agent.config import WORKSPACE_DIR
 
 
 def _resolve(path: str) -> Path:
+    """Resuelve una ruta relativa contra WORKSPACE_DIR y valida que no se escape del sandbox.
+
+    Args:
+        path: Ruta relativa (puede incluir "..") introducida por el modelo.
+
+    Returns:
+        Ruta absoluta resuelta, garantizada dentro de WORKSPACE_DIR.
+
+    Raises:
+        ValueError: Si la ruta resuelta cae fuera de WORKSPACE_DIR.
+    """
     resolved = (WORKSPACE_DIR / path).resolve()
     if not resolved.is_relative_to(WORKSPACE_DIR.resolve()):
         raise ValueError(f"ruta fuera del sandbox: {path}")
@@ -12,6 +23,19 @@ def _resolve(path: str) -> Path:
 
 
 def list_files(path: str = ".") -> str:
+    """Lista los nombres de archivos y carpetas de un directorio dentro del workspace.
+
+    Los errores (ruta fuera del sandbox, ruta inexistente, no es un
+    directorio) se devuelven como texto en vez de lanzar una excepcion, para
+    que el propio modelo los vea en el resultado de la tool y pueda reintentar.
+
+    Args:
+        path: Ruta relativa al workspace a listar. Por defecto ".".
+
+    Returns:
+        Un nombre por linea (carpetas con "/" al final), "(vacio)" si el
+        directorio no tiene contenido, o un mensaje "Error: ..." si algo falla.
+    """
     try:
         target = _resolve(path)
     except ValueError as e:
@@ -27,6 +51,19 @@ def list_files(path: str = ".") -> str:
 
 
 def read_file(path: str) -> str:
+    """Lee el contenido completo de un archivo de texto dentro del workspace.
+
+    Igual que list_files, los errores se devuelven como texto (no como
+    excepcion) para que el modelo pueda verlos y ajustar su siguiente llamada.
+
+    Args:
+        path: Ruta relativa al workspace del archivo a leer.
+
+    Returns:
+        Contenido del archivo como texto (UTF-8, con reemplazo de caracteres
+        invalidos), o un mensaje "Error: ..." si la ruta no es valida, no
+        existe, no es un archivo, o falla la lectura.
+    """
     try:
         target = _resolve(path)
     except ValueError as e:
@@ -43,6 +80,9 @@ def read_file(path: str) -> str:
         return f"Error al leer el archivo: {e}"
 
 
+# Descripcion de las tools en formato OpenAI, para pasarla a
+# client.chat.completions.create(tools=TOOL_SCHEMAS) y que el modelo sepa
+# que puede invocarlas y con que argumentos.
 TOOL_SCHEMAS = [
     {
         "type": "function",
@@ -79,6 +119,8 @@ TOOL_SCHEMAS = [
     },
 ]
 
+# Mapeo nombre de tool -> funcion Python real, para que agent/loop.py pueda
+# ejecutar la tool que pida el modelo sin conocer los detalles de cada una.
 TOOL_DISPATCH = {
     "list_files": list_files,
     "read_file": read_file,
