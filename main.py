@@ -38,3 +38,13 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+""" 
+    # Latencia de ejemplo:
+        > lee el directorio workspace
+        [latencia] vuelta 1: llamada al modelo = 26.31s
+        [latencia] tool 'list_files' = 0.001s
+        [latencia] vuelta 2: llamada al modelo = 9.63s
+        [latencia] turno completo = 35.95s
+ """

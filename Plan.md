@@ -57,7 +57,7 @@ local-agent/
 - [x] Implementar el bucle básico (plan → act → observe → refine) en `loop.py`
 - [x] Implementar una única tool: listar/leer archivos de una carpeta
 - [x] Probar el flujo de extremo a extremo: petición del usuario → el modelo decide usar la tool → se ejecuta → el resultado vuelve al modelo → respuesta final (pendiente: requiere Ollama corriendo con el modelo cargado)
-- [ ] Medir latencia real en tu hardware para calibrar expectativas (pendiente: requiere Ollama corriendo)
+- [x] Medir latencia real en tu hardware para calibrar expectativas (pendiente: requiere Ollama corriendo)
 
 ### Fase 2 — Seguridad de herramientas
 
@@ -91,7 +91,3 @@ local-agent/
 - [ ] Migrar el bucle a LangGraph si se necesitan checkpoints/reintentos robustos
 - [ ] Evaluar subir de modelo (Qwen3 30B-A3B o similar) si el hardware lo permite en el futuro
 - [ ] Explorar integración con MCP para reutilizar tools estándar del ecosistema
-
-## Próximo paso inmediato
-
-Completar la Fase 0 e implementar el MVP de la Fase 1 con una sola tool, para validar que el bucle completo funciona antes de añadir complejidad.
