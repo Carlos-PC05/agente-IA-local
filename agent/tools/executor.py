@@ -19,8 +19,7 @@ _EXECUTOR = ThreadPoolExecutor(max_workers=4, thread_name_prefix="tool")
 def execute_tool(name: str, raw_arguments: str, *, log_file: Path | None = None) -> str:
     """Ejecuta una tool pedida por el modelo, aplicando toda la capa de seguridad.
 
-    Orden de comprobaciones (ver
-    docs/superpowers/specs/2026-08-03-fase2-seguridad-tools-design.md):
+    Orden de comprobaciones:
     1. La tool debe estar registrada en agent/tools/registry.py (allowlist).
     2. Su Permission debe estar en agent.config.ALLOWED_PERMISSION_LEVELS.
     3. Sus argumentos deben parsear como JSON y validar contra su JSON Schema.

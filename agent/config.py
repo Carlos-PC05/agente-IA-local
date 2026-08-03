@@ -4,7 +4,7 @@ from pathlib import Path
 # Endpoint local de Ollama, expuesto con API compatible con OpenAI.
 OLLAMA_BASE_URL = "http://localhost:11434/v1"
 
-#en el portátil funciona mejor "llama3.2:1b"
+#en el portátil funciona mejor "llama3.2:1b" pero es medio retrasado
 #MODEL_NAME = "qwen3:8b" 
 #MODEL_NAME = "llama3.2:1b"  
 MODEL_NAME = "qwen2.5:1.5b"
