@@ -5,9 +5,9 @@ from pathlib import Path
 OLLAMA_BASE_URL = "http://localhost:11434/v1"
 
 #en el portátil funciona mejor "llama3.2:1b" pero es medio retrasado
-#MODEL_NAME = "qwen3:8b" 
+MODEL_NAME = "qwen3:8b" 
 #MODEL_NAME = "llama3.2:1b"  
-MODEL_NAME = "qwen2.5:1.5b"
+#MODEL_NAME = "qwen2.5:1.5b"
 
 # Unica carpeta a la que las tools de archivos pueden acceder (ver agent/tools/files.py).
 WORKSPACE_DIR = Path(__file__).resolve().parent.parent / "workspace"

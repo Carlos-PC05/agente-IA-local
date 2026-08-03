@@ -28,7 +28,7 @@ def main():
     print("Agente listo. Escribe 'salir' para terminar.")
     while True:
         user_input = input("> ").strip()
-        if user_input.lower() in ("salir", "exit", "quit"):
+        if user_input.lower() in ("salir", "exit", "quit", "bye", "adios", "q"):
             break
         if not user_input:
             continue
