@@ -2,6 +2,7 @@
 from pathlib import Path
 
 from agent.config import WORKSPACE_DIR
+from agent.tools.spec import Permission, ToolSpec
 
 
 def _resolve(path: str) -> Path:
@@ -80,55 +81,48 @@ def read_file(path: str) -> str:
         return f"Error al leer el archivo: {e}"
 
 
-# Descripcion de las tools en formato OpenAI, para pasarla a
-# client.chat.completions.create(tools=TOOL_SCHEMAS) y que el modelo sepa
-# que puede invocarlas y con que argumentos.
-TOOL_SCHEMAS = [
-    {
-        "type": "function",
-        "function": {
-            "name": "list_files",
-            "description": "Lista los archivos y carpetas de un directorio dentro del workspace.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Ruta relativa al workspace (por defecto '.').",
-                    }
-                },
+# Tools de este modulo como ToolSpec (ver agent/tools/spec.py).
+# agent/tools/registry.py las agrega en ALL_TOOLS, la allowlist explicita de
+# tools que el agente puede ejecutar.
+FILES_TOOLS = [
+    ToolSpec(
+        name="list_files",
+        description="Lista los archivos y carpetas de un directorio dentro del workspace.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Ruta relativa al workspace (por defecto '.').",
+                }
             },
         },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "read_file",
-            "description": "Lee el contenido de un archivo de texto dentro del workspace.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Ruta relativa al workspace del archivo a leer.",
-                    }
-                },
-                "required": ["path"],
+        handler=list_files,
+        permission=Permission.READ,
+    ),
+    ToolSpec(
+        name="read_file",
+        description="Lee el contenido de un archivo de texto dentro del workspace.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Ruta relativa al workspace del archivo a leer.",
+                }
             },
+            "required": ["path"],
         },
-    },
+        handler=read_file,
+        permission=Permission.READ,
+    ),
 ]
-
-# Mapeo nombre de tool -> funcion Python real, para que agent/loop.py pueda
-# ejecutar la tool que pida el modelo sin conocer los detalles de cada una.
-TOOL_DISPATCH = {
-    "list_files": list_files,
-    "read_file": read_file,
-}
 
 
 if __name__ == "__main__":
     assert "Error" not in list_files("."), "listar el workspace no deberia fallar"
     assert "fuera del sandbox" in list_files("../"), "escapar con ../ deberia fallar"
     assert "fuera del sandbox" in read_file("../config.py"), "leer fuera del sandbox deberia fallar"
+    assert {t.name for t in FILES_TOOLS} == {"list_files", "read_file"}
+
     print("OK: agent/tools/files.py autochequeo pasado")
