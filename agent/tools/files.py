@@ -8,6 +8,16 @@ from agent.tools.spec import Permission, ToolSpec
 def _resolve(path: str) -> Path:
     """Resuelve una ruta relativa contra WORKSPACE_DIR y valida que no se escape del sandbox.
 
+    Algunos modelos (sobre todo los mas pequenos, p. ej. qwen2.5:1.5b) no
+    siguen al pie de la letra la instruccion de usar una ruta relativa y
+    devuelven algo como "/workspace" o "/workspace/archivo.txt", asumiendo
+    una convencion tipo Docker donde "/workspace" es la raiz montada. Sin
+    normalizar, pathlib trata ese "/" inicial como absoluto y descarta
+    WORKSPACE_DIR al hacer el join, lo que tira la ruta fuera del sandbox
+    aunque la intencion del modelo fuera valida. Por eso se reconoce ese
+    prefijo especifico (el nombre real de la carpeta sandbox) y se recorta
+    antes de resolver; cualquier otra ruta absoluta se trata igual que antes.
+
     Args:
         path: Ruta relativa (puede incluir "..") introducida por el modelo.
 
@@ -17,7 +27,12 @@ def _resolve(path: str) -> Path:
     Raises:
         ValueError: Si la ruta resuelta cae fuera de WORKSPACE_DIR.
     """
-    resolved = (WORKSPACE_DIR / path).resolve()
+    normalized = path.replace("\\", "/")
+    sandbox_prefix = "/" + WORKSPACE_DIR.name
+    if normalized == sandbox_prefix or normalized.startswith(sandbox_prefix + "/"):
+        normalized = normalized[len(sandbox_prefix):].lstrip("/") or "."
+
+    resolved = (WORKSPACE_DIR / normalized).resolve()
     if not resolved.is_relative_to(WORKSPACE_DIR.resolve()):
         raise ValueError(f"ruta fuera del sandbox: {path}")
     return resolved
@@ -124,5 +139,15 @@ if __name__ == "__main__":
     assert "fuera del sandbox" in list_files("../"), "escapar con ../ deberia fallar"
     assert "fuera del sandbox" in read_file("../config.py"), "leer fuera del sandbox deberia fallar"
     assert {t.name for t in FILES_TOOLS} == {"list_files", "read_file"}
+
+    # Algunos modelos (p. ej. qwen2.5:1.5b) devuelven "/workspace" en vez de
+    # "." como path, asumiendo una convencion tipo Docker donde "/workspace"
+    # es la raiz del sandbox. Sin normalizar, pathlib trata ese "/" inicial
+    # como absoluto y descarta WORKSPACE_DIR, tirando la ruta fuera del
+    # sandbox (ver logs/tool_calls.log linea del 2026-08-03T18:30:29).
+    assert "Error" not in list_files("/workspace"), "'/workspace' deberia equivaler a la raiz del sandbox"
+    assert "Error" not in read_file("/workspace/prueba.txt"), "'/workspace/archivo' deberia resolverse dentro del sandbox"
+    # Absolutas de verdad (fuera del nombre del sandbox) siguen bloqueadas.
+    assert "fuera del sandbox" in list_files("/etc"), "una ruta absoluta ajena al sandbox debe seguir rechazada"
 
     print("OK: agent/tools/files.py autochequeo pasado")
