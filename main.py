@@ -4,7 +4,8 @@ import openai
 from agent.config import OLLAMA_BASE_URL
 from agent.loop import run_turn
 from agent.memory import Memory
-from agent.tools.files import TOOL_DISPATCH, TOOL_SCHEMAS
+from agent.tools import registry
+from agent.tools.executor import execute_tool
 
 SYSTEM_PROMPT = (
     "Eres un agente de IA local que ayuda con tareas sencillas de archivos. "
@@ -22,6 +23,7 @@ def main():
     """
     client = openai.OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama")
     memory = Memory(system_prompt=SYSTEM_PROMPT)
+    tools_schema = registry.openai_schemas()
 
     print("Agente listo. Escribe 'salir' para terminar.")
     while True:
@@ -32,7 +34,7 @@ def main():
             continue
 
         memory.append({"role": "user", "content": user_input})
-        response = run_turn(client, memory, TOOL_SCHEMAS, TOOL_DISPATCH)
+        response = run_turn(client, memory, tools_schema, execute_tool)
         print(response)
 
 
@@ -40,7 +42,7 @@ if __name__ == "__main__":
     main()
 
 
-""" 
+"""
     # Latencia de ejemplo:
         > lee el directorio workspace
         [latencia] vuelta 1: llamada al modelo = 26.31s
