@@ -61,11 +61,11 @@ local-agent/
 
 ### Fase 2 — Seguridad de herramientas
 
-- [ ] Definir una allowlist explícita de comandos/acciones permitidas
-- [ ] Validar los argumentos de cada tool con JSON Schema antes de ejecutarlos
-- [ ] Añadir niveles de permiso (ej: lectura vs escritura vs ejecución)
-- [ ] Forzar timeouts en cada llamada a herramienta
-- [ ] Registrar (log) cada llamada a tool: qué se pidió, qué argumentos, qué resultado
+- [x] Definir una allowlist explícita de comandos/acciones permitidas
+- [x] Validar los argumentos de cada tool con JSON Schema antes de ejecutarlos
+- [x] Añadir niveles de permiso (ej: lectura vs escritura vs ejecución)
+- [x] Forzar timeouts en cada llamada a herramienta
+- [x] Registrar (log) cada llamada a tool: qué se pidió, qué argumentos, qué resultado
 
 ### Fase 3 — Ampliación de capacidades
 
