@@ -16,3 +16,18 @@ WORKSPACE_DIR.mkdir(exist_ok=True)
 # Tope de vueltas de plan-act-observe-refine en run_turn(), para cortar bucles
 # infinitos de tool-calling si el modelo no llega nunca a una respuesta final.
 MAX_ITERATIONS = 8
+
+# Niveles de permiso habilitados: una tool cuyo Permission no este en este
+# conjunto se rechaza en agent/tools/executor.py antes de ejecutarla. Hoy solo
+# hay tools de lectura; escritura y ejecucion se habilitan aqui explicitamente
+# cuando lleguen (Fase 3).
+ALLOWED_PERMISSION_LEVELS = {"read"}
+
+# Timeout por defecto (segundos) para la ejecucion de una tool, usado por
+# agent/tools/executor.py cuando el ToolSpec no especifica uno propio.
+DEFAULT_TOOL_TIMEOUT = 5.0
+
+# Carpeta donde agent/audit_log.py escribe el registro de llamadas a tools.
+LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+TOOL_LOG_FILE = LOG_DIR / "tool_calls.log"
