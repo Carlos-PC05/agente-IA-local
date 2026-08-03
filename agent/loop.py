@@ -1,19 +1,19 @@
 """Bucle principal del agente: plan -> act -> observe -> refine."""
-import json
 import time
 
 from agent.config import MAX_ITERATIONS, MODEL_NAME
 
 
-def run_turn(client, memory, tools_schema, tool_dispatch):
+def run_turn(client, memory, tools_schema, execute_tool):
     """Ejecuta el ciclo plan-act-observe-refine hasta obtener una respuesta final.
 
     En cada vuelta pide al modelo el siguiente paso (Plan). Si el modelo pide
-    ejecutar tools, las ejecuta capturando cualquier excepcion como texto de
-    error en vez de propagarla (Act), y guarda tanto la llamada como su
-    resultado en la memoria (Observe) antes de volver a preguntar al modelo
-    (Refine). Termina en cuanto el modelo responde sin pedir mas tools, o al
-    superar MAX_ITERATIONS vueltas.
+    ejecutar tools, delega cada una en `execute_tool` -- que aplica allowlist,
+    permisos, validacion de argumentos y timeout antes de correrla (ver
+    agent/tools/executor.py) -- y guarda tanto la llamada como su resultado en
+    la memoria (Observe) antes de volver a preguntar al modelo (Refine).
+    Termina en cuanto el modelo responde sin pedir mas tools, o al superar
+    MAX_ITERATIONS vueltas.
 
     De paso imprime por stdout la latencia de cada llamada al modelo, de
     cada tool y del turno completo, para poder calibrar el rendimiento real
@@ -24,10 +24,13 @@ def run_turn(client, memory, tools_schema, tool_dispatch):
         client: Cliente `openai.OpenAI` apuntando al endpoint de Ollama.
         memory: Instancia de `Memory` con el historial de la conversacion;
             se muta anadiendo los mensajes de asistente y de tool generados.
-        tools_schema: Lista de tools en formato OpenAI (ver TOOL_SCHEMAS en
-            agent/tools/files.py) que se ofrecen al modelo en cada llamada.
-        tool_dispatch: Diccionario nombre de tool -> funcion Python que la
-            implementa (ver TOOL_DISPATCH en agent/tools/files.py).
+        tools_schema: Lista de tools en formato OpenAI (ver
+            agent/tools/registry.py:openai_schemas()) que se ofrecen al
+            modelo en cada llamada.
+        execute_tool: Funcion `(name: str, raw_arguments: str) -> str` que
+            ejecuta una tool ya validada y con la capa de seguridad aplicada
+            (ver agent/tools/executor.py:execute_tool()). Nunca lanza
+            excepciones: cualquier fallo vuelve como string "Error: ...".
 
     Returns:
         Texto de la respuesta final del modelo, o un mensaje de error si se
@@ -69,17 +72,9 @@ def run_turn(client, memory, tools_schema, tool_dispatch):
         )
 
         for call in message.tool_calls:
-            tool_fn = tool_dispatch.get(call.function.name)
-            if tool_fn is None:
-                result = f"Error: tool desconocida '{call.function.name}'"
-            else:
-                tool_start = time.perf_counter()
-                try:
-                    args = json.loads(call.function.arguments or "{}")
-                    result = tool_fn(**args)
-                except Exception as e:
-                    result = f"Error al ejecutar la tool: {e}"
-                print(f"[latencia] tool '{call.function.name}' = {time.perf_counter() - tool_start:.3f}s")
+            tool_start = time.perf_counter()
+            result = execute_tool(call.function.name, call.function.arguments)
+            print(f"[latencia] tool '{call.function.name}' = {time.perf_counter() - tool_start:.3f}s")
 
             memory.append(
                 {
@@ -91,3 +86,82 @@ def run_turn(client, memory, tools_schema, tool_dispatch):
 
     print(f"[latencia] turno completo (MAX_ITERATIONS alcanzado) = {time.perf_counter() - turn_start:.2f}s")
     return "Error: se alcanzo MAX_ITERATIONS sin obtener una respuesta final."
+
+
+if __name__ == "__main__":
+    from agent.memory import Memory
+
+    class _FakeFunction:
+        def __init__(self, name, arguments):
+            self.name = name
+            self.arguments = arguments
+
+    class _FakeToolCall:
+        def __init__(self, call_id, name, arguments):
+            self.id = call_id
+            self.function = _FakeFunction(name, arguments)
+
+    class _FakeMessage:
+        def __init__(self, content, tool_calls=None):
+            self.content = content
+            self.tool_calls = tool_calls
+
+    class _FakeChoice:
+        def __init__(self, message):
+            self.message = message
+
+    class _FakeResponse:
+        def __init__(self, message):
+            self.choices = [_FakeChoice(message)]
+
+    class _FakeCompletions:
+        def __init__(self, responses):
+            self._responses = list(responses)
+
+        def create(self, **kwargs):
+            return self._responses.pop(0)
+
+    class _FakeChat:
+        def __init__(self, responses):
+            self.completions = _FakeCompletions(responses)
+
+    class _FakeClient:
+        """Cliente falso que devuelve respuestas predefinidas, para probar
+        run_turn() sin necesitar Ollama corriendo."""
+
+        def __init__(self, responses):
+            self.chat = _FakeChat(responses)
+
+    # Escenario 1: el modelo responde directamente, sin pedir tools.
+    client_directo = _FakeClient([_FakeResponse(_FakeMessage("hola"))])
+    memoria = Memory(system_prompt="sistema")
+    memoria.append({"role": "user", "content": "hola"})
+    resultado = run_turn(
+        client_directo, memoria, tools_schema=[], execute_tool=lambda n, a: "no deberia llamarse"
+    )
+    assert resultado == "hola"
+
+    # Escenario 2: el modelo pide una tool y luego responde con el resultado.
+    llamada_tool = _FakeToolCall("call_1", "list_files", '{"path": "."}')
+    respuestas = [
+        _FakeResponse(_FakeMessage(None, tool_calls=[llamada_tool])),
+        _FakeResponse(_FakeMessage("listo")),
+    ]
+    client_con_tool = _FakeClient(respuestas)
+    memoria2 = Memory(system_prompt="sistema")
+    memoria2.append({"role": "user", "content": "lista archivos"})
+
+    llamadas_recibidas = []
+
+    def _execute_tool_falso(name, raw_arguments):
+        llamadas_recibidas.append((name, raw_arguments))
+        return "a.txt\nb.txt"
+
+    resultado2 = run_turn(client_con_tool, memoria2, tools_schema=[], execute_tool=_execute_tool_falso)
+    assert resultado2 == "listo"
+    assert llamadas_recibidas == [("list_files", '{"path": "."}')]
+    _mensajes_tool = [m for m in memoria2.get() if m.get("role") == "tool"]
+    assert len(_mensajes_tool) == 1
+    assert _mensajes_tool[0]["content"] == "a.txt\nb.txt"
+
+    print("OK: agent/loop.py autochequeo pasado")
