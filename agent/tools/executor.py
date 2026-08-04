@@ -99,13 +99,6 @@ def execute_tool(name: str, raw_arguments: str, *, log_file: Path | None = None)
         result = str(future.result(timeout=tool.timeout_seconds))
         status = "ok"
     except FutureTimeoutError:
-        # En Python 3.11+, concurrent.futures.TimeoutError es la misma clase
-        # que el TimeoutError del builtin, asi que esta rama tambien
-        # atraparia un TimeoutError lanzado por el propio handler de la
-        # tool (no por el timeout de future.result()), etiquetandolo como
-        # "timeout" cuando en realidad seria un error del handler. Ninguna
-        # tool actual lanza TimeoutError, asi que es una limitacion aceptada
-        # y documentada, no algo a corregir ahora.
         result = f"Error: la tool '{name}' supero el timeout de {tool.timeout_seconds}s"
         status = "timeout"
     except Exception as e:
@@ -129,10 +122,6 @@ if __name__ == "__main__":
 
     from agent.tools.spec import Permission, ToolSpec
 
-    # Todo el autochequeo escribe en un log temporal (no en logs/tool_calls.log)
-    # para no ensuciar el registro real del proyecto cada vez que se corre
-    # `python -m agent.tools.executor` (misma convencion que el autochequeo de
-    # agent/audit_log.py).
     with tempfile.TemporaryDirectory() as tmp:
         _test_log = Path(tmp) / "test_tool_calls.log"
 
@@ -153,10 +142,6 @@ if __name__ == "__main__":
             "read_file", '{"path": "x.txt", "extra": 1}', log_file=_test_log
         )
 
-        # Permiso no habilitado: se registra una tool falsa de nivel EXECUTE
-        # (el unico nivel que sigue deshabilitado, ya que READ y WRITE ya
-        # estan en ALLOWED_PERMISSION_LEVELS) y se comprueba que execute_tool
-        # la rechaza sin llegar a invocar el handler.
         def _handler_no_debe_llamarse(**kwargs):
             raise AssertionError("no deberia ejecutarse: el permiso no esta habilitado")
 
@@ -169,9 +154,12 @@ if __name__ == "__main__":
         )
         registry.ALL_TOOLS.append(_execute_tool_fake)
         registry._BY_NAME[_execute_tool_fake.name] = _execute_tool_fake
+        _niveles_reales = ALLOWED_PERMISSION_LEVELS
+        globals()["ALLOWED_PERMISSION_LEVELS"] = {"read", "write"}
         try:
             assert "no habilitado" in execute_tool("_fake_execute_tool", "{}", log_file=_test_log)
         finally:
+            globals()["ALLOWED_PERMISSION_LEVELS"] = _niveles_reales
             registry.ALL_TOOLS.remove(_execute_tool_fake)
             del registry._BY_NAME[_execute_tool_fake.name]
 
@@ -195,10 +183,7 @@ if __name__ == "__main__":
         finally:
             registry.ALL_TOOLS.remove(_slow_tool)
             del registry._BY_NAME[_slow_tool.name]
-
-        # Verifica que el log temporal recibio las entradas esperadas (una
-        # por cada llamada a execute_tool() de arriba) y que el archivo real
-        # de logs/tool_calls.log no se toco en ningun momento.
+            
         _lines = _test_log.read_text(encoding="utf-8").strip().splitlines()
         assert len(_lines) == 7
 

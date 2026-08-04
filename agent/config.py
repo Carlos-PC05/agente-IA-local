@@ -25,13 +25,19 @@ MAX_ITERATIONS = 8
 
 # Niveles de permiso habilitados: una tool cuyo Permission no este en este
 # conjunto se rechaza en agent/tools/executor.py antes de ejecutarla. Escritura
-# habilitada para move_file (Fase 3); ejecucion se habilita aqui explicitamente
-# cuando llegue la tool de shell.
-ALLOWED_PERMISSION_LEVELS = {"read", "write"}
+# habilitada para move_file y notas; ejecucion habilitada para run_script
+# (agent/tools/shell.py), que solo lanza scripts de dentro del workspace.
+ALLOWED_PERMISSION_LEVELS = {"read", "write", "execute"}
 
 # Timeout por defecto (segundos) para la ejecucion de una tool, usado por
 # agent/tools/executor.py cuando el ToolSpec no especifica uno propio.
 DEFAULT_TOOL_TIMEOUT = 5.0
+
+# Timeout (segundos) del subproceso que lanza agent/tools/shell.py. Es mas
+# largo que DEFAULT_TOOL_TIMEOUT porque un script de usuario puede tardar, y
+# la tool declara un timeout algo mayor que este para que salte primero el del
+# subproceso (que si mata al proceso hijo) y no el del executor.
+SCRIPT_TIMEOUT = 20.0
 
 # Carpeta donde agent/audit_log.py escribe el registro de llamadas a tools.
 LOG_DIR = Path(__file__).resolve().parent.parent / "logs"

@@ -1,13 +1,13 @@
 """Registro central de tools: la allowlist explicita de lo que el agente puede ejecutar."""
 from agent.tools.files import FILES_TOOLS
 from agent.tools.notes import NOTES_TOOLS
+from agent.tools.shell import SHELL_TOOLS
 from agent.tools.spec import ToolSpec
 
 # Lista literal de tools habilitadas. Una tool solo es ejecutable si esta
 # aqui: no hay resolucion dinamica ni registro implicito. Anadir una tool
-# nueva (p. ej. de agent/tools/shell.py en Fase 3) es un cambio de codigo
-# explicito en esta lista.
-ALL_TOOLS: list[ToolSpec] = [*FILES_TOOLS, *NOTES_TOOLS]
+# nueva es un cambio de codigo explicito en esta lista.
+ALL_TOOLS: list[ToolSpec] = [*FILES_TOOLS, *NOTES_TOOLS, *SHELL_TOOLS]
 
 _BY_NAME = {tool.name: tool for tool in ALL_TOOLS}
 

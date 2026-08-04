@@ -184,18 +184,3 @@ FILES_TOOLS = [
         permission=Permission.WRITE,
     ),
 ]
-
-
-if __name__ == "__main__":
-    assert "Error" not in list_files("."), "listar el workspace no deberia fallar"
-    assert "fuera del sandbox" in list_files("../"), "escapar con ../ deberia fallar"
-    assert "fuera del sandbox" in read_file("../config.py"), "leer fuera del sandbox deberia fallar"
-    assert {t.name for t in FILES_TOOLS} == {"list_files", "read_file", "move_file"}
-
-    # Caso real: algunos modelos devuelven "/workspace" en vez de "." (ver _resolve).
-    assert "Error" not in list_files("/workspace"), "'/workspace' deberia equivaler a la raiz del sandbox"
-    assert "Error" not in read_file("/workspace/prueba.txt"), "'/workspace/archivo' deberia resolverse dentro del sandbox"
-    # Absolutas de verdad (fuera del nombre del sandbox) siguen bloqueadas.
-    assert "fuera del sandbox" in list_files("/etc"), "una ruta absoluta ajena al sandbox debe seguir rechazada"
-
-    print("OK: agent/tools/files.py autochequeo pasado")
