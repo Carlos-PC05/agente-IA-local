@@ -13,6 +13,12 @@ MODEL_NAME = "qwen3:8b"
 WORKSPACE_DIR = Path(__file__).resolve().parent.parent / "workspace"
 WORKSPACE_DIR.mkdir(exist_ok=True)
 
+# Carpeta de notas persistentes del agente (ver agent/tools/notes.py). Separada
+# de WORKSPACE_DIR a proposito: las notas solo se tocan via la tool de notas,
+# y las tools de archivos siguen restringidas al workspace.
+NOTES_DIR = Path(__file__).resolve().parent.parent / "notas"
+NOTES_DIR.mkdir(exist_ok=True)
+
 # Tope de vueltas de plan-act-observe-refine en run_turn(), para cortar bucles
 # infinitos de tool-calling si el modelo no llega nunca a una respuesta final.
 MAX_ITERATIONS = 8
