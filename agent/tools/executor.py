@@ -153,25 +153,27 @@ if __name__ == "__main__":
             "read_file", '{"path": "x.txt", "extra": 1}', log_file=_test_log
         )
 
-        # Permiso no habilitado: se registra una tool falsa de nivel WRITE y se
-        # comprueba que execute_tool la rechaza sin llegar a invocar el handler.
+        # Permiso no habilitado: se registra una tool falsa de nivel EXECUTE
+        # (el unico nivel que sigue deshabilitado, ya que READ y WRITE ya
+        # estan en ALLOWED_PERMISSION_LEVELS) y se comprueba que execute_tool
+        # la rechaza sin llegar a invocar el handler.
         def _handler_no_debe_llamarse(**kwargs):
             raise AssertionError("no deberia ejecutarse: el permiso no esta habilitado")
 
-        _write_tool = ToolSpec(
-            name="_fake_write_tool",
+        _execute_tool_fake = ToolSpec(
+            name="_fake_execute_tool",
             description="tool de prueba de solo autochequeo",
             parameters={"type": "object", "properties": {}},
             handler=_handler_no_debe_llamarse,
-            permission=Permission.WRITE,
+            permission=Permission.EXECUTE,
         )
-        registry.ALL_TOOLS.append(_write_tool)
-        registry._BY_NAME[_write_tool.name] = _write_tool
+        registry.ALL_TOOLS.append(_execute_tool_fake)
+        registry._BY_NAME[_execute_tool_fake.name] = _execute_tool_fake
         try:
-            assert "no habilitado" in execute_tool("_fake_write_tool", "{}", log_file=_test_log)
+            assert "no habilitado" in execute_tool("_fake_execute_tool", "{}", log_file=_test_log)
         finally:
-            registry.ALL_TOOLS.remove(_write_tool)
-            del registry._BY_NAME[_write_tool.name]
+            registry.ALL_TOOLS.remove(_execute_tool_fake)
+            del registry._BY_NAME[_execute_tool_fake.name]
 
         # Timeout: tool falsa cuyo handler duerme mas que su timeout_seconds.
         def _handler_lento(**kwargs):
