@@ -7,7 +7,7 @@ Construir un agente de IA que corre 100% en local (sin llamadas a la nube), capa
 ## Contexto técnico
 
 - **Sistema operativo:** Windows
-- **Hardware:** GPU AMD Radeon RX 5600 XT, 16GB de RAM
+- **Hardware:** Sin GPU dedicada, 16GB de RAM (Portátil), AMD Radeon 5600XT, 16GB de RAM (Torre)
 - **Runtime de inferencia:** Ollama (`http://localhost:11434/v1`, API compatible con OpenAI)
 - **Modelo inicial:** Qwen3 8B (cuantizado Q4) — buen equilibrio entre tool-calling y consumo de recursos en CPU
 - **Modelo de respaldo para desarrollo rápido:** Phi-3 Mini (~2GB) — usar solo para probar el bucle/tools mientras se itera, no para evaluar calidad final
