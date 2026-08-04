@@ -3,3 +3,4 @@ docs/
 workspace/
 __pycache__/
 logs/
+.superpowers/
