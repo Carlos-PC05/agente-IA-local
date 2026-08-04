@@ -18,10 +18,10 @@ WORKSPACE_DIR.mkdir(exist_ok=True)
 MAX_ITERATIONS = 8
 
 # Niveles de permiso habilitados: una tool cuyo Permission no este en este
-# conjunto se rechaza en agent/tools/executor.py antes de ejecutarla. Hoy solo
-# hay tools de lectura; escritura y ejecucion se habilitan aqui explicitamente
-# cuando lleguen (Fase 3).
-ALLOWED_PERMISSION_LEVELS = {"read"}
+# conjunto se rechaza en agent/tools/executor.py antes de ejecutarla. Escritura
+# habilitada para move_file (Fase 3); ejecucion se habilita aqui explicitamente
+# cuando llegue la tool de shell.
+ALLOWED_PERMISSION_LEVELS = {"read", "write"}
 
 # Timeout por defecto (segundos) para la ejecucion de una tool, usado por
 # agent/tools/executor.py cuando el ToolSpec no especifica uno propio.

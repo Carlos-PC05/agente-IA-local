@@ -40,7 +40,7 @@ Cada autochequeo imprime `OK: <módulo> autochequeo pasado` al final si todo pas
 **Capa de seguridad de tools** (`agent/tools/executor.py:execute_tool`) — punto único de ejecución, en este orden estricto:
 
 1. Allowlist: la tool debe estar en `agent/tools/registry.py:ALL_TOOLS` (lista literal, sin registro dinámico).
-2. Permiso: `tool.permission` debe estar en `agent.config.ALLOWED_PERMISSION_LEVELS` (hoy solo `{"read"}`; write/execute se habilitan explícitamente cuando lleguen tools de Fase 3).
+2. Permiso: `tool.permission` debe estar en `agent.config.ALLOWED_PERMISSION_LEVELS` (hoy `{"read", "write"}` — `write` habilitado para `move_file`; `execute` se habilita explícitamente cuando llegue la tool de shell).
 3. Validación: argumentos parseados como JSON y validados contra el JSON Schema de la tool (`agent/tools/validation.py`, subconjunto de JSON Schema: `properties`, `required`, `enum`, `additionalProperties`).
 4. Timeout: el handler corre en un `ThreadPoolExecutor` compartido con `tool.timeout_seconds` (por defecto `DEFAULT_TOOL_TIMEOUT`); un handler colgado deja de esperarse pero el hilo sigue vivo (limitación conocida, documentada en el propio `executor.py`, relevante para la futura tool de shell).
 

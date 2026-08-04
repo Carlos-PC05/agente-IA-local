@@ -90,6 +90,44 @@ def read_file(path: str) -> str:
         return f"Error al leer el archivo: {e}"
 
 
+def move_file(source: str, destination: str) -> str:
+    """Mueve o renombra un archivo dentro del workspace.
+
+    Crea las carpetas intermedias del destino si no existen. No sobrescribe:
+    si el destino ya existe, falla en vez de reemplazarlo. Igual que
+    list_files y read_file, los errores se devuelven como texto en vez de
+    lanzar una excepcion.
+
+    Args:
+        source: Ruta relativa al workspace del archivo a mover.
+        destination: Ruta relativa al workspace del destino. Un nombre de
+            archivo distinto en la misma carpeta equivale a renombrar.
+
+    Returns:
+        Un mensaje de confirmacion, o "Error: ..." si algo fallo.
+    """
+    try:
+        source_path = _resolve(source)
+        dest_path = _resolve(destination)
+    except ValueError as e:
+        return f"Error: {e}"
+
+    if not source_path.exists():
+        return f"Error: el archivo de origen no existe: {source}"
+    if not source_path.is_file():
+        return f"Error: no es un archivo: {source}"
+    if dest_path.exists():
+        return f"Error: el destino ya existe: {destination}"
+
+    try:
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path.rename(dest_path)
+    except OSError as e:
+        return f"Error al mover el archivo: {e}"
+
+    return f"Movido: {source} -> {destination}"
+
+
 # Tools de este modulo como ToolSpec (ver agent/tools/spec.py).
 # agent/tools/registry.py las agrega en ALL_TOOLS, la allowlist explicita de
 # tools que el agente puede ejecutar.
@@ -124,6 +162,26 @@ FILES_TOOLS = [
         },
         handler=read_file,
         permission=Permission.READ,
+    ),
+    ToolSpec(
+        name="move_file",
+        description="Mueve o renombra un archivo dentro del workspace. Crea las carpetas intermedias del destino si hacen falta; falla si el destino ya existe.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "source": {
+                    "type": "string",
+                    "description": "Ruta relativa al workspace del archivo a mover.",
+                },
+                "destination": {
+                    "type": "string",
+                    "description": "Ruta relativa al workspace del destino (nuevo nombre y/o carpeta).",
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        handler=move_file,
+        permission=Permission.WRITE,
     ),
 ]
 
