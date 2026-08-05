@@ -72,7 +72,7 @@ local-agent/
 - [x] Tool de organización de archivos (mover/renombrar según reglas)
 - [x] Tool de notas/recordatorios locales persistentes
 - [x] Tool de ejecución de scripts propios (con allowlist estricta)
-- [ ] (Opcional, conecta con tu interés en RAG) Tool de búsqueda semántica sobre tus propios documentos locales
+- [x] (Opcional, conecta con tu interés en RAG) Tool de búsqueda semántica sobre tus propios documentos locales
 
 #### Fase 3.1 - Implementar testing modular con pytest
 
