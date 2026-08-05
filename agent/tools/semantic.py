@@ -22,6 +22,7 @@ from agent.config import (
     SEARCH_EXTENSIONS,
     WORKSPACE_DIR,
 )
+from agent.tools.spec import Permission, ToolSpec
 
 # Tamano de lote al embedir: se piden los vectores de 64 fragmentos por
 # llamada para no saturar a Ollama con peticiones minisculas.
@@ -157,3 +158,109 @@ def _chunk_text(text: str) -> list[str]:
     if current:
         chunks.append(current)
     return chunks
+
+
+def _load_index() -> dict | None:
+    """Lee el indice semantico de disco.
+
+    Returns:
+        El diccionario del indice, o None si el archivo no existe o su
+        JSON es invalido (se considera que no hay indice).
+    """
+    try:
+        return json.loads(INDEX_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _cosine_similarity(a: list[float], b: list[float]) -> float:
+    """Similitud de coseno entre dos vectores, normalizados L2.
+
+    Args:
+        a: Primer vector.
+        b: Segundo vector.
+
+    Returns:
+        Coseno en [-1.0, 1.0]; 0.0 si algun vector es todo ceros.
+    """
+    dot = sum(x * y for x, y in zip(a, b))
+    norm_a = sum(x * x for x in a) ** 0.5
+    norm_b = sum(y * y for y in b) ** 0.5
+    if norm_a == 0.0 or norm_b == 0.0:
+        return 0.0
+    return dot / (norm_a * norm_b)
+
+
+def _snippet(text: str) -> str:
+    """Compacta un fragmento para mostrarlo en una sola linea (max _SNIPPET_MAX_CHARS)."""
+    one_line = " ".join(text.split())
+    return one_line[:_SNIPPET_MAX_CHARS]
+
+
+def search_documents(query: str, top_k: int = DEFAULT_TOP_K) -> str:
+    """Busca los fragmentos del indice mas similares a `query`.
+
+    Carga el indice de disco, embedia la consulta y devuelve los top_k
+    fragmentos con mayor similitud de coseno, de mayor a menor, con su
+    archivo, la puntuacion (0-1) y un fragmento del texto.
+
+    Args:
+        query: Consulta en lenguaje natural del modelo.
+        top_k: Numero de resultados (se recorta a [1, 10] y al numero de
+            fragmentos del indice).
+
+    Returns:
+        Una linea por resultado como
+        "workspace/a.md (0.82): 'texto del fragmento...'", o "Error: ..."
+        si no hay indice o fallan los embeddings (nunca lanza).
+    """
+    query = query.strip()
+    if not query:
+        return "Error: la consulta no puede estar vacia"
+
+    index = _load_index()
+    if index is None:
+        return "Error: no hay indice. Ejecuta `python -m agent.tools.semantic --reindex`"
+
+    chunks = index.get("chunks", [])
+    if not chunks:
+        return "Error: el indice no tiene fragmentos. Ejecuta `python -m agent.tools.semantic --reindex`"
+
+    try:
+        query_vector = _embed_texts([query], _new_client())[0]
+    except Exception as e:
+        return f"Error: al generar embeddings: {e}"
+
+    ranked = sorted(
+        ((_cosine_similarity(query_vector, c["vector"]), c) for c in chunks),
+        key=lambda item: item[0],
+        reverse=True,
+    )
+
+    top_k = max(1, min(int(top_k), 10))
+    lines = [
+        f"{chunk['file']} ({score:.2f}): \"{_snippet(chunk['text'])}\""
+        for score, chunk in ranked[:top_k]
+    ]
+    return "\n".join(lines)
+
+
+# Tools de este modulo como ToolSpec (ver agent/tools/spec.py).
+# agent/tools/registry.py las agrega en ALL_TOOLS, la allowlist explicita.
+SEMANTIC_TOOLS = [
+    ToolSpec(
+        name="search_documents",
+        description="Busca en los documentos del workspace por similitud semantica: devuelve los fragmentos mas relevantes con su archivo y una puntuacion de 0 a 1. Si no hay indice, ejecuta python -m agent.tools.semantic --reindex.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Consulta en lenguaje natural sobre el contenido de los documentos."},
+                "top_k": {"type": "integer", "description": "Numero maximo de resultados (entre 1 y 10; por defecto 5)."},
+            },
+            "required": ["query"],
+        },
+        handler=search_documents,
+        permission=Permission.READ,
+        timeout_seconds=30.0,
+    ),
+]

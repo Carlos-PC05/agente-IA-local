@@ -1,13 +1,14 @@
 """Registro central de tools: la allowlist explicita de lo que el agente puede ejecutar."""
 from agent.tools.files import FILES_TOOLS
 from agent.tools.notes import NOTES_TOOLS
+from agent.tools.semantic import SEMANTIC_TOOLS
 from agent.tools.shell import SHELL_TOOLS
 from agent.tools.spec import ToolSpec
 
 # Lista literal de tools habilitadas. Una tool solo es ejecutable si esta
 # aqui: no hay resolucion dinamica ni registro implicito. Anadir una tool
 # nueva es un cambio de codigo explicito en esta lista.
-ALL_TOOLS: list[ToolSpec] = [*FILES_TOOLS, *NOTES_TOOLS, *SHELL_TOOLS]
+ALL_TOOLS: list[ToolSpec] = [*FILES_TOOLS, *NOTES_TOOLS, *SHELL_TOOLS, *SEMANTIC_TOOLS]
 
 _BY_NAME = {tool.name: tool for tool in ALL_TOOLS}
 
@@ -47,6 +48,7 @@ def openai_schemas() -> list[dict]:
 if __name__ == "__main__":
     assert get("list_files") is not None, "list_files deberia estar registrada"
     assert get("no_existe") is None, "una tool no registrada debe devolver None"
+    assert get("search_documents") is not None, "search_documents deberia estar registrada"
 
     schemas = openai_schemas()
     assert len(schemas) == len(ALL_TOOLS)

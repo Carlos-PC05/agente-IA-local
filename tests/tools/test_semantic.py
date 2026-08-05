@@ -124,3 +124,67 @@ def test_reindex_sobrescribe_el_indice_anterior(workspace, semantic_index, fake_
     index = json.loads(semantic_index.read_text(encoding="utf-8"))
     assert len(index["chunks"]) == 1
     assert index["chunks"][0]["text"] == "el gato duerme"
+
+
+def test_cosine_similarity():
+    assert semantic._cosine_similarity([1.0, 0.0], [1.0, 0.0]) == 1.0
+    assert semantic._cosine_similarity([1.0, 0.0], [0.0, 1.0]) == 0.0
+    assert semantic._cosine_similarity([2.0, 0.0], [1.0, 0.0]) == 1.0
+    assert semantic._cosine_similarity([0.0, 0.0], [1.0, 0.0]) == 0.0
+
+
+def _build_index(workspace, semantic_index, fake_embedder):
+    (workspace / "a.md").write_text("el gato duerme en el sofa", encoding="utf-8")
+    (workspace / "b.md").write_text("receta de paella valenciana", encoding="utf-8")
+    semantic.reindex()
+    return semantic_index
+
+
+def test_search_devuelve_el_documento_mas_similar_primero(workspace, semantic_index, fake_embedder):
+    _build_index(workspace, semantic_index, fake_embedder)
+    result = semantic.search_documents("busco algo sobre gatos")
+    lines = result.splitlines()
+    assert len(lines) == 2
+    assert lines[0].startswith("workspace/a.md (1.00):")
+    assert lines[1].startswith("workspace/b.md (0.00):")
+    assert '"el gato duerme en el sofa"' in lines[0]
+
+
+def test_search_respeta_top_k(workspace, semantic_index, fake_embedder):
+    _build_index(workspace, semantic_index, fake_embedder)
+    result = semantic.search_documents("gato", top_k=1)
+    assert len(result.splitlines()) == 1
+    assert result.startswith("workspace/a.md")
+
+
+def test_search_sin_indice_devuelve_error_instructivo(workspace, semantic_index, fake_embedder):
+    result = semantic.search_documents("gato")
+    assert result.startswith("Error:") and "--reindex" in result
+
+
+def test_search_error_de_embeddings_vuelve_como_error(workspace, semantic_index, fake_embedder, monkeypatch):
+    _build_index(workspace, semantic_index, fake_embedder)
+
+    def _explota(texts, client):
+        raise RuntimeError("ollama caido")
+
+    monkeypatch.setattr(semantic, "_embed_texts", _explota)
+    result = semantic.search_documents("gato")
+    assert result.startswith("Error:")
+
+
+def test_search_clampa_top_k_fuera_de_rango(workspace, semantic_index, fake_embedder):
+    _build_index(workspace, semantic_index, fake_embedder)
+    result = semantic.search_documents("gato", top_k=999)
+    assert len(result.splitlines()) == 2
+    result = semantic.search_documents("gato", top_k=0)
+    assert len(result.splitlines()) == 1
+
+
+def test_search_trunca_el_snippet(workspace, semantic_index, fake_embedder):
+    (workspace / "a.md").write_text("el gato duerme " + "zz " * 100, encoding="utf-8")
+    semantic.reindex()
+    line = semantic.search_documents("gato").splitlines()[0]
+    snippet = line.split('"')[1]
+    assert snippet == "el gato duerme " + "zz " * 61 + "zz"  # 200 chars exactos
+    assert len(snippet) <= semantic._SNIPPET_MAX_CHARS
