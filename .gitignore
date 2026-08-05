@@ -4,3 +4,4 @@ workspace/
 __pycache__/
 logs/
 .superpowers/
+indice_semantico.json
