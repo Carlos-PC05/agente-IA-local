@@ -23,3 +23,9 @@ def test_chunk_corta_un_parrafo_gigante():
 
 def test_chunk_ignora_parrafos_vacios():
     assert semantic._chunk_text("a\n\n\n\nb") == ["a\n\nb"]
+
+
+def test_chunk_presupuesta_el_separador_en_el_limite():
+    chunks = semantic._chunk_text("x" * 499 + "\n\n" + "y")
+    assert chunks == ["x" * 499, "y"]
+    assert all(len(c) <= semantic.CHUNK_MAX_CHARS for c in chunks)

@@ -29,7 +29,7 @@ def _chunk_text(text: str) -> list[str]:
         paragraph = paragraph.strip()
         if not paragraph:
             continue
-        if len(current) + len(paragraph) <= CHUNK_MAX_CHARS:
+        if len(current) + len(paragraph) + (2 if current else 0) <= CHUNK_MAX_CHARS:
             current = f"{current}\n\n{paragraph}" if current else paragraph
         else:
             if current:
