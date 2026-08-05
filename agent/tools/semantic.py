@@ -6,6 +6,7 @@ de coseno. El indice se construye manualmente con
 `python -m agent.tools.semantic --reindex`; la tool search_documents solo
 lee el indice y embedia la consulta del modelo.
 """
+import argparse
 import json
 import os
 import sys
@@ -108,7 +109,7 @@ def reindex() -> str:
     try:
         vectors = _embed_texts([c["text"] for c in chunks], client)
     except Exception as e:
-        return f"Error al generar embeddings: {e}"
+        return f"Error: al generar embeddings: {e}"
 
     for chunk, vector in zip(chunks, vectors):
         chunk["vector"] = vector
@@ -119,7 +120,7 @@ def reindex() -> str:
         tmp.write_text(json.dumps(index, ensure_ascii=False), encoding="utf-8")
         os.replace(tmp, INDEX_FILE)
     except OSError as e:
-        return f"Error al guardar el indice: {e}"
+        return f"Error: al guardar el indice: {e}"
 
     return f"Indexados {len(chunks)} fragmentos de {len(files)} archivos"
 
@@ -264,3 +265,37 @@ SEMANTIC_TOOLS = [
         timeout_seconds=30.0,
     ),
 ]
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Punto de entrada CLI: `python -m agent.tools.semantic --reindex`.
+
+    Args:
+        argv: Argumentos de la linea de comandos (None usa sys.argv).
+
+    Returns:
+        Codigo de salida: 0 si todo fue bien, 1 si reindex() devolvio
+        un "Error: ...".
+    """
+    parser = argparse.ArgumentParser(
+        prog="python -m agent.tools.semantic",
+        description="Indexa los documentos del workspace para la busqueda semantica.",
+    )
+    parser.add_argument(
+        "--reindex",
+        action="store_true",
+        help="Reconstruye indice_semantico.json embebiendo todo el workspace.",
+    )
+    args = parser.parse_args(argv)
+
+    if not args.reindex:
+        parser.print_help()
+        return 0
+
+    result = reindex()
+    print(result)
+    return 0 if not result.startswith("Error:") else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -188,3 +188,19 @@ def test_search_trunca_el_snippet(workspace, semantic_index, fake_embedder):
     snippet = line.split('"')[1]
     assert snippet == "el gato duerme " + "zz " * 61 + "zz"  # 200 chars exactos
     assert len(snippet) <= semantic._SNIPPET_MAX_CHARS
+
+
+def test_main_reindex_devuelve_cero_y_imprime_resumen(monkeypatch, capsys):
+    monkeypatch.setattr(semantic, "reindex", lambda: "Indexados 3 fragmentos de 2 archivos")
+    assert semantic.main(["--reindex"]) == 0
+    assert "Indexados 3 fragmentos de 2 archivos" in capsys.readouterr().out
+
+
+def test_main_reindex_con_error_devuelve_uno(monkeypatch, capsys):
+    monkeypatch.setattr(semantic, "reindex", lambda: "Error: ollama caido")
+    assert semantic.main(["--reindex"]) == 1
+
+
+def test_main_sin_argumentos_imprime_ayuda(capsys):
+    assert semantic.main([]) == 0
+    assert "--reindex" in capsys.readouterr().out
