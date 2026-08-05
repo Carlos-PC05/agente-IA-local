@@ -43,3 +43,23 @@ SCRIPT_TIMEOUT = 20.0
 LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 TOOL_LOG_FILE = LOG_DIR / "tool_calls.log"
+
+# Modelo de embeddings de Ollama para la búsqueda semántica
+# (agent/tools/semantic.py). Hay que descargarlo una vez con
+# `ollama pull nomic-embed-text`; es el único modelo de embeddings usado.
+EMBEDDING_MODEL = "nomic-embed-text"
+
+# Indice de embeddings de la búsqueda semántica. Vive en la raiz del
+# proyecto (fuera de WORKSPACE_DIR) a proposito: las tools de archivos del
+# agente no deben poder tocarlo. Se regenera con
+# `python -m agent.tools.semantic --reindex`.
+INDEX_FILE = Path(__file__).resolve().parent.parent / "indice_semantico.json"
+
+# Extensiones de archivos del workspace que se indexan.
+SEARCH_EXTENSIONS = {".txt", ".md", ".py", ".json"}
+
+# Tamano maximo de un fragmento de texto indexado (en caracteres).
+CHUNK_MAX_CHARS = 500
+
+# Numero de resultados por defecto de search_documents.
+DEFAULT_TOP_K = 5
